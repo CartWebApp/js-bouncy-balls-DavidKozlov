@@ -7,7 +7,49 @@
   </head>
 
   <body>
-    <h1>bouncing balls</h1>
+    <h1>Count: <span id="ball-count">0</span></h1>
+    <div id="sidebar">
+      <button id="close-sidebar-btn" aria-label="Close sidebar">✕</button>
+      <div id="colors-controls">
+        <label for="new-color-input">Add color:</label>
+        <input id="new-color-input" type="text" placeholder="e.g. green or #00ff00">
+        <label for="new-color-amount" style="margin-left:6px;">Amount:</label>
+        <input id="new-color-amount" type="number" min="0" value="0">
+        <button id="add-color-btn">Add</button>
+      </div>
+      <div id="config-panel">
+      <h3>Simulation Config</h3>
+      <div class="config-row">
+        <label for="initial-count">Initial balls</label>
+        <input id="initial-count" type="number" min="0" value="25">
+      </div>
+      <div class="config-row">
+        <label for="max-speed">Max speed</label>
+        <input id="max-speed" type="number" min="1" value="100">
+      </div>
+      <div class="config-row">
+        <label for="max-balls">Max balls</label>
+        <input id="max-balls" type="number" min="1" value="2000">
+      </div>
+      <div class="config-row">
+        <label for="restitution">Restitution (0-1)</label>
+        <input id="restitution" type="number" step="0.05" min="0" max="1" value="0.9">
+      </div>
+      <div class="config-row">
+        <label for="split-threshold">Split threshold (vel)</label>
+        <input id="split-threshold" type="number" min="0" value="6">
+      </div>
+      <div class="config-row">
+        <label for="min-split-size">Min size to split</label>
+        <input id="min-split-size" type="number" min="1" value="12">
+      </div>
+      <div class="config-row">
+        <button id="apply-config-btn">Apply & Reload</button>
+      </div>
+    </div>
+      <div id="colors-container"></div>
+    </div>
+    <button id="open-sidebar-btn" aria-label="Open sidebar">☰</button>
     <canvas></canvas>
 
     <script src="main.js"></script>

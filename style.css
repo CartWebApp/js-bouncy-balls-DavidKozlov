@@ -1,25 +1,253 @@
+/* reset and base */
 html, body {
   margin: 0;
-}
-
-html {
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   height: 100%;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  background: #000;
+  color: #fff;
 }
 
 body {
   overflow: hidden;
-  height: inherit;
 }
 
+/* canvas sits behind the UI */
+canvas {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+/* Header count in the top-right */
 h1 {
-  font-size: 2rem;
-  letter-spacing: -1px;
+  font-size: 1.25rem;
+  letter-spacing: -0.5px;
   position: absolute;
   margin: 0;
-  top: -4px;
-  right: 5px;
-
-  color: transparent;
-  text-shadow: 0 0 4px white;
+  top: 10px;
+  right: 16px;
+  z-index: 3;
+  background: rgba(0,0,0,0.45);
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: #fff;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.6);
 }
+
+/* Controls (add color etc) in the top-left */
+#colors-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: transparent;
+  padding: 0;
+  width: 450px;
+}
+
+#colors-controls label {
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+#new-color-input {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: #fff;
+  outline: none;
+}
+
+#new-color-input::placeholder {
+  color: rgba(255,255,255,0.5);
+}
+
+#new-color-amount {
+  width: 60px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: #fff;
+  outline: none;
+}
+
+
+
+#add-color-btn {
+  padding: 6px 10px;
+  background: #1e90ff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+#add-color-btn:active {
+  transform: translateY(1px);
+}
+
+/* Colors list (moved into sidebar) */
+#colors-container {
+  max-height: calc(100vh - 180px);
+  overflow: auto;
+  width: 450px;
+  background: transparent;
+  padding: 0;
+  margin-top: 8px;
+}
+
+/* Config panel (below color controls) */
+#config-panel {
+  width: 450px;
+  background: transparent;
+  padding: 0;
+  margin-top: 12px;
+}
+
+#config-panel h3 {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+}
+
+.config-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+#config-panel input[type="number"] {
+  width: 100px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+  color: #fff;
+}
+
+#apply-config-btn {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  background: #28a745;
+  color: white;
+  font-weight: 600;
+}
+
+.color-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  margin-right: 8px;
+  font-size: 0.95rem;
+}
+
+.color-row:last-child { border-bottom: none; }
+
+.color-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.06) inset;
+}
+
+/* remove color button shown to the right of each color row */
+.remove-color-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255,120,120,0.95);
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.remove-color-btn:hover { background: rgba(255,255,255,0.03); }
+
+.remove-color-btn img {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+/* push remove button to the right in the color row */
+.remove-color-btn { margin-left: auto; }
+
+/* small screens tweaks */
+@media (max-width: 520px) {
+  #colors-container { width: 160px; }
+  #colors-controls { left: 10px; }
+  h1 { right: 10px; }
+}
+
+/* Sidebar wrapper */
+#sidebar {
+  position: fixed;
+  left: 16px;
+  top: 10px;
+  z-index: 4;
+  width: 500px;
+  max-height: calc(100vh - 20px);
+  overflow: auto;
+  background: rgba(0,0,0,0.45);
+  padding: 12px;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+#sidebar.collapsed {
+  transform: translateX(-320px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+#close-sidebar-btn {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* Open button shown when sidebar is closed */
+#open-sidebar-btn {
+  position: fixed;
+  left: 12px;
+  top: 12px;
+  z-index: 5;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+}
+
+/* When sidebar shown, hide open button */
+#sidebar:not(.collapsed) + #open-sidebar-btn { display: none; }
+
+/* Make controls and config visually contained inside sidebar */
+#sidebar #colors-controls, #sidebar #config-panel, #sidebar #colors-container {
+  background: transparent;
+  padding: 0 4px 10px 4px;
+}
+
+/* Slight spacing for sections */
+#sidebar #colors-controls { padding-top: 8px; }
+#sidebar #config-panel { border-top: 1px solid rgba(255,255,255,0.04); padding-top: 10px; }

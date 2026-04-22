@@ -2,9 +2,41 @@
 
 const canvas = document.querySelector('canvas');
 const ctx = canvas.getContext('2d');
+const countDisplay = document.getElementById('ball-count');
+const colorsContainer = document.getElementById('colors-container');
+const newColorInput = document.getElementById('new-color-input');
+const newColorAmountInput = document.getElementById('new-color-amount');
+const addColorBtn = document.getElementById('add-color-btn');
+const sidebar = document.getElementById('sidebar');
+const closeSidebarBtn = document.getElementById('close-sidebar-btn');
+const openSidebarBtn = document.getElementById('open-sidebar-btn');
 
 const width = canvas.width = window.innerWidth;
 const height = canvas.height = window.innerHeight;
+
+// configurations
+
+const ballColors = ['red', 'blue'];
+// mutable globals (will be set from config)
+let maxSpeed = 100;
+let MAX_BALLS = 2000;
+
+// central config object (UI writes will modify this and then reload)
+let config = {
+  initialCount: 25,
+  maxSpeed: 100,
+  maxBalls: 2000,
+  restitution: 0.9,
+  splitThresholdVel: 6,
+  minSizeToSplit: 12
+};
+
+// sync globals from config
+function syncGlobalsFromConfig() {
+  maxSpeed = Number(config.maxSpeed) || 100;
+  MAX_BALLS = Number(config.maxBalls) || 2000;
+}
+syncGlobalsFromConfig();
 
 // function to generate random number
 
@@ -51,6 +83,140 @@ Ball.prototype.update = function () {
 }
 
 let balls = [];
+let pendingAdds = [];
+
+function updateCounts() {
+  if (countDisplay) countDisplay.textContent = balls.length;
+  // render per-color counts
+  if (colorsContainer) {
+    colorsContainer.innerHTML = '';
+    ballColors.forEach((c) => {
+      const cnt = balls.filter(b => b.color === c).length;
+      const row = document.createElement('div');
+      row.className = 'color-row';
+      const swatch = document.createElement('span');
+  swatch.className = 'color-swatch';
+  // color applied dynamically; sizes and layout handled in CSS
+  swatch.style.backgroundColor = c;
+      row.appendChild(swatch);
+      const label = document.createElement('span');
+      label.textContent = `${c}: `;
+      row.appendChild(label);
+      const countSpan = document.createElement('span');
+      countSpan.textContent = String(cnt);
+
+      const removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-color-btn';
+    removeBtn.type = 'button';
+    removeBtn.title = `Remove color ${c}`;
+    // use trash icon for remove button (styling in CSS)
+    const icon = document.createElement('img');
+    icon.src = 'images/icons8-trash.svg';
+    icon.alt = `Remove ${c}`;
+    removeBtn.appendChild(icon);
+
+      removeBtn.addEventListener('click', () => {
+        const idx = ballColors.findIndex(x => x.toLowerCase() === c.toLowerCase());
+        if (idx >= 0) {
+          ballColors.splice(idx, 1);
+          // remove any existing balls of that color
+          for (let i = balls.length - 1; i >= 0; i--) {
+            if (balls[i].color && balls[i].color.toLowerCase() === c.toLowerCase()) {
+              balls.splice(i, 1);
+            }
+          }
+          updateCounts();
+        }
+      });
+
+      row.appendChild(countSpan);
+      row.appendChild(removeBtn);
+      colorsContainer.appendChild(row);
+    });
+  }
+}
+
+// handle adding new colors via the UI
+if (addColorBtn) {
+  addColorBtn.addEventListener('click', () => {
+    const val = (newColorInput && newColorInput.value || '').trim();
+    if (!val) return;
+    // read the amount to spawn (0 = don't spawn any)
+    const amount = Math.max(0, parseInt(newColorAmountInput && newColorAmountInput.value) || 0);
+
+    const exists = ballColors.some(c => c.toLowerCase() === val.toLowerCase());
+    if (!exists) {
+      ballColors.push(val);
+    }
+
+    // spawn requested amount of new balls of this color (respect MAX_BALLS)
+    let spawned = 0;
+    while (spawned < amount && balls.length < MAX_BALLS) {
+      let size = random(6, 20);
+      let color = val;
+      let ball = new Ball(
+        random(0 + size, width - size),
+        random(0 + size, height - size),
+        random(-7, 7),
+        random(-7, 7),
+        color,
+        size
+      );
+      balls.push(ball);
+      spawned++;
+    }
+
+    updateCounts();
+    if (newColorInput) newColorInput.value = '';
+    if (newColorAmountInput) newColorAmountInput.value = '0';
+  });
+}
+
+// sidebar open/close handlers
+if (closeSidebarBtn && sidebar) {
+  closeSidebarBtn.addEventListener('click', () => {
+    sidebar.classList.add('collapsed');
+    if (openSidebarBtn) openSidebarBtn.style.display = 'flex';
+  });
+}
+if (openSidebarBtn && sidebar) {
+  openSidebarBtn.addEventListener('click', () => {
+    sidebar.classList.remove('collapsed');
+    openSidebarBtn.style.display = 'none';
+  });
+}
+
+// config UI elements
+const initialCountInput = document.getElementById('initial-count');
+const maxSpeedInput = document.getElementById('max-speed');
+const maxBallsInput = document.getElementById('max-balls');
+const restitutionInput = document.getElementById('restitution');
+const splitThresholdInput = document.getElementById('split-threshold');
+const minSplitSizeInput = document.getElementById('min-split-size');
+const applyConfigBtn = document.getElementById('apply-config-btn');
+
+function readConfigFromUI() {
+  if (initialCountInput) config.initialCount = Math.max(0, parseInt(initialCountInput.value) || config.initialCount);
+  if (maxSpeedInput) config.maxSpeed = Math.max(1, parseFloat(maxSpeedInput.value) || config.maxSpeed);
+  if (maxBallsInput) config.maxBalls = Math.max(1, parseInt(maxBallsInput.value) || config.maxBalls);
+  if (restitutionInput) config.restitution = Math.min(1, Math.max(0, parseFloat(restitutionInput.value) || config.restitution));
+  if (splitThresholdInput) config.splitThresholdVel = Math.max(0, parseFloat(splitThresholdInput.value) || config.splitThresholdVel);
+  if (minSplitSizeInput) config.minSizeToSplit = Math.max(1, parseInt(minSplitSizeInput.value) || config.minSizeToSplit);
+}
+
+function applyConfigAndReload() {
+  readConfigFromUI();
+  syncGlobalsFromConfig();
+  reloadSimulation();
+}
+
+if (applyConfigBtn) {
+  applyConfigBtn.addEventListener('click', () => {
+    applyConfigAndReload();
+  });
+}
+
+// reset-colors button removed; individual color remove buttons are shown next to each color
 
 Ball.prototype.growth = function () {
   if (this.size < 50) {
@@ -88,8 +254,8 @@ Ball.prototype.collisionDetect = function () {
         let m1 = this.size * this.size;
         let m2 = balls[j].size * balls[j].size;
 
-        // Coefficient of restitution (1 = elastic)
-        let e = 1;
+    // Coefficient of restitution (slightly inelastic to avoid energy runaway)
+  let e = Number(config.restitution) || 0.9;
 
         // Impulse scalar
         let jImpulse = -(1 + e) * velAlongNormal / (1 / m1 + 1 / m2);
@@ -104,6 +270,18 @@ Ball.prototype.collisionDetect = function () {
         balls[j].velX -= (impulseX / m2);
         balls[j].velY -= (impulseY / m2);
 
+        // Clamp speeds
+        function clampSpeed(ball) {
+          let sp = Math.sqrt(ball.velX * ball.velX + ball.velY * ball.velY);
+          if (sp > maxSpeed) {
+            let s = maxSpeed / sp;
+            ball.velX *= s;
+            ball.velY *= s;
+          }
+        }
+        clampSpeed(this);
+        clampSpeed(balls[j]);
+
         // Positional correction to avoid sinking (percent slightly > 0)
         const percent = 0.8;
         const allowance = 0.01;
@@ -115,16 +293,13 @@ Ball.prototype.collisionDetect = function () {
         balls[j].x -= (correction * (1 / m2)) * nx;
         balls[j].y -= (correction * (1 / m2)) * ny;
 
-        // --- Splitting logic ---
-        const splitThresholdVel = 6;
-        const minSizeToSplit = 12;
-
+        // --- Splitting logic (configurable) ---
         let relativeNormalSpeed = Math.abs(velAlongNormal);
-        if (relativeNormalSpeed >= splitThresholdVel) {
+        if (relativeNormalSpeed >= Number(config.splitThresholdVel || 6)) {
           // choose the larger ball to split
           let parentBall = this.size >= balls[j].size ? this : balls[j];
 
-          if (parentBall.size > minSizeToSplit) {
+          if (parentBall.size > Number(config.minSizeToSplit || 12)) {
 
             let newSize = Math.max(6, Math.floor(parentBall.size / Math.SQRT2));
 
@@ -167,8 +342,8 @@ Ball.prototype.collisionDetect = function () {
               this.color = child1.color;
               this.size = child1.size;
 
-              // push child2 as a new ball
-              balls.push(child2);
+              // queue child2 to be added after this frame's collision processing
+              pendingAdds.push(child2);
             } else {
               // parent is balls[j]
               balls[idx].x = child1.x;
@@ -178,7 +353,8 @@ Ball.prototype.collisionDetect = function () {
               balls[idx].color = child1.color;
               balls[idx].size = child1.size;
 
-              balls.push(child2);
+              // queue child2 to be added after this frame's collision processing
+              pendingAdds.push(child2);
             }
           }
         }
@@ -188,18 +364,44 @@ Ball.prototype.collisionDetect = function () {
 }
 
 
-while (balls.length < 25) {
+// initial seeding removed — `populateInitial()` will create initial balls based on config
+// populate initial based on config
+function populateInitial() {
+  balls.length = 0;
+  pendingAdds.length = 0;
+  const initial = Number(config.initialCount) || 25;
+  let attempts = 0;
+  while (balls.length < initial && attempts < initial * 5) {
+    attempts++;
   let size = random(10, 20);
-  let ball = new Ball(
-    random(0 + size, width - size),
-    random(0 + size, height - size),
-    random(-7, 7),
-    random(-7, 7),
-    (random(0, 1) < 0.5) ? 'red' : 'blue',
-    size
-  );
+  let color = (ballColors.length > 0) ? ballColors[Math.floor(Math.random() * ballColors.length)] : '#cccccc';
+    let ball = new Ball(
+      random(0 + size, width - size),
+      random(0 + size, height - size),
+      random(-7, 7),
+      random(-7, 7),
+      color,
+      size
+    );
+    balls.push(ball);
+  }
+  updateCounts();
+}
 
-  balls.push(ball);
+populateInitial();
+function reloadSimulation() {
+  readConfigFromUI();
+  syncGlobalsFromConfig();
+
+  // clear current balls and queued additions
+  balls.length = 0;
+  pendingAdds.length = 0;
+
+  // repopulate from config
+  populateInitial();
+
+  // refresh counts/UI
+  updateCounts();
 }
 
 function loop() {
@@ -211,6 +413,17 @@ function loop() {
     balls[i].update();
     balls[i].growth();
     balls[i].collisionDetect();
+  }
+
+  // append any pending
+  if (pendingAdds.length) {
+    for (let k = 0; k < pendingAdds.length; k++) {
+      if (balls.length < MAX_BALLS) {
+        balls.push(pendingAdds[k]);
+      }
+    }
+    pendingAdds = [];
+    updateCounts();
   }
 
   requestAnimationFrame(loop);
