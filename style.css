@@ -132,6 +132,10 @@ h1 {
   color: #fff;
 }
 
+/* smaller inputs */
+.config-row label { flex: 1 1 auto; }
+.config-row input[type="number"] { flex: 0 0 110px; }
+
 #apply-config-btn {
   padding: 6px 8px;
   border-radius: 6px;
@@ -242,12 +246,10 @@ h1 {
 /* When sidebar shown, hide open button */
 #sidebar:not(.collapsed) + #open-sidebar-btn { display: none; }
 
-/* Make controls and config visually contained inside sidebar */
 #sidebar #colors-controls, #sidebar #config-panel, #sidebar #colors-container {
   background: transparent;
   padding: 0 4px 10px 4px;
 }
 
-/* Slight spacing for sections */
 #sidebar #colors-controls { padding-top: 8px; }
 #sidebar #config-panel { border-top: 1px solid rgba(255,255,255,0.04); padding-top: 10px; }

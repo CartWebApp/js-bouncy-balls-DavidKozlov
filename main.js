@@ -27,7 +27,9 @@ let config = {
   maxBalls: 2000,
   restitution: 0.9,
   splitThresholdVel: 6,
-  minSizeToSplit: 12
+  minSizeToSplit: 12,
+  initialSpeed: 7,
+  speedGrowthPerSec: 0
 };
 
 // sync globals from config
@@ -94,9 +96,8 @@ function updateCounts() {
       const row = document.createElement('div');
       row.className = 'color-row';
       const swatch = document.createElement('span');
-      swatch.className = 'color-swatch';
-      // color applied dynamically; sizes and layout handled in CSS
-      swatch.style.backgroundColor = c;
+  swatch.className = 'color-swatch';
+  swatch.style.backgroundColor = c;
       row.appendChild(swatch);
       const label = document.createElement('span');
       label.textContent = `${c}: `;
@@ -138,6 +139,8 @@ function updateCounts() {
 // handle adding new colors via the UI
 if (addColorBtn) {
   addColorBtn.addEventListener('click', () => {
+    // read UI config so initialSpeed/spawn behavior applies immediately
+    readConfigFromUI();
     const val = (newColorInput && newColorInput.value || '').trim();
     if (!val) return;
     // read the amount to spawn (0 = don't spawn any)
@@ -153,11 +156,16 @@ if (addColorBtn) {
     while (spawned < amount && balls.length < MAX_BALLS) {
       let size = random(6, 20);
       let color = val;
+      // spawn using configured initial speed
+      let ang = Math.random() * Math.PI * 2;
+      let speed = Number(config.initialSpeed) || 7;
+      let vx = Math.cos(ang) * speed + (Math.random() - 0.5) * 0.5;
+      let vy = Math.sin(ang) * speed + (Math.random() - 0.5) * 0.5;
       let ball = new Ball(
         random(0 + size, width - size),
         random(0 + size, height - size),
-        random(-7, 7),
-        random(-7, 7),
+        vx,
+        vy,
         color,
         size
       );
@@ -189,6 +197,8 @@ if (openSidebarBtn && sidebar) {
 const initialCountInput = document.getElementById('initial-count');
 const maxSpeedInput = document.getElementById('max-speed');
 const maxBallsInput = document.getElementById('max-balls');
+const initialSpeedInput = document.getElementById('initial-speed');
+const speedGrowthInput = document.getElementById('speed-growth');
 const restitutionInput = document.getElementById('restitution');
 const splitThresholdInput = document.getElementById('split-threshold');
 const minSplitSizeInput = document.getElementById('min-split-size');
@@ -198,6 +208,8 @@ function readConfigFromUI() {
   if (initialCountInput) config.initialCount = Math.max(0, parseInt(initialCountInput.value) || config.initialCount);
   if (maxSpeedInput) config.maxSpeed = Math.max(1, parseFloat(maxSpeedInput.value) || config.maxSpeed);
   if (maxBallsInput) config.maxBalls = Math.max(1, parseInt(maxBallsInput.value) || config.maxBalls);
+  if (initialSpeedInput) config.initialSpeed = Math.max(0, parseFloat(initialSpeedInput.value) || config.initialSpeed);
+  if (speedGrowthInput) config.speedGrowthPerSec = Math.max(0, parseFloat(speedGrowthInput.value) || config.speedGrowthPerSec);
   if (restitutionInput) config.restitution = Math.min(1, Math.max(0, parseFloat(restitutionInput.value) || config.restitution));
   if (splitThresholdInput) config.splitThresholdVel = Math.max(0, parseFloat(splitThresholdInput.value) || config.splitThresholdVel);
   if (minSplitSizeInput) config.minSizeToSplit = Math.max(1, parseInt(minSplitSizeInput.value) || config.minSizeToSplit);
@@ -372,13 +384,18 @@ function populateInitial() {
   let attempts = 0;
   while (balls.length < initial && attempts < initial * 5) {
     attempts++;
-    let size = random(10, 20);
-    let color = (ballColors.length > 0) ? ballColors[Math.floor(Math.random() * ballColors.length)] : '#cccccc';
+  let size = random(10, 20);
+  let color = (ballColors.length > 0) ? ballColors[Math.floor(Math.random() * ballColors.length)] : '#cccccc';
+    // spawn with a random direction but magnitude based on config.initialSpeed
+    let ang = Math.random() * Math.PI * 2;
+    let speed = Number(config.initialSpeed) || 7;
+    let vx = Math.cos(ang) * speed + (Math.random() - 0.5) * 0.5;
+    let vy = Math.sin(ang) * speed + (Math.random() - 0.5) * 0.5;
     let ball = new Ball(
       random(0 + size, width - size),
       random(0 + size, height - size),
-      random(-7, 7),
-      random(-7, 7),
+      vx,
+      vy,
       color,
       size
     );
@@ -403,7 +420,30 @@ function reloadSimulation() {
   updateCounts();
 }
 
-function loop() {
+let lastTime = performance.now();
+function loop(time) {
+  const now = time || performance.now();
+  const dt = Math.max(0, (now - lastTime) / 1000); // seconds since last frame
+  lastTime = now;
+
+  // apply slight speed growth if configured
+  const growthPerSec = Number(config.speedGrowthPerSec) || 0;
+  if (growthPerSec > 0 && balls.length) {
+    for (let i = 0; i < balls.length; i++) {
+      let b = balls[i];
+      // increase velocity magnitude while preserving direction
+      let mag = Math.sqrt(b.velX * b.velX + b.velY * b.velY);
+      if (mag > 0) {
+        let targetMag = mag + growthPerSec * dt;
+        // clamp to maxSpeed
+        if (targetMag > maxSpeed) targetMag = maxSpeed;
+        let scale = targetMag / mag;
+        b.velX *= scale;
+        b.velY *= scale;
+      }
+    }
+  }
+
   ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
   ctx.fillRect(0, 0, width, height);
 
@@ -428,4 +468,4 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
-loop();
+requestAnimationFrame(loop);
