@@ -17,7 +17,6 @@ const height = canvas.height = window.innerHeight;
 // configurations
 
 const ballColors = ['red', 'blue'];
-// mutable globals (will be set from config)
 let maxSpeed = 100;
 let MAX_BALLS = 2000;
 
@@ -95,9 +94,9 @@ function updateCounts() {
       const row = document.createElement('div');
       row.className = 'color-row';
       const swatch = document.createElement('span');
-  swatch.className = 'color-swatch';
-  // color applied dynamically; sizes and layout handled in CSS
-  swatch.style.backgroundColor = c;
+      swatch.className = 'color-swatch';
+      // color applied dynamically; sizes and layout handled in CSS
+      swatch.style.backgroundColor = c;
       row.appendChild(swatch);
       const label = document.createElement('span');
       label.textContent = `${c}: `;
@@ -106,14 +105,14 @@ function updateCounts() {
       countSpan.textContent = String(cnt);
 
       const removeBtn = document.createElement('button');
-    removeBtn.className = 'remove-color-btn';
-    removeBtn.type = 'button';
-    removeBtn.title = `Remove color ${c}`;
-    // use trash icon for remove button (styling in CSS)
-    const icon = document.createElement('img');
-    icon.src = 'images/icons8-trash.svg';
-    icon.alt = `Remove ${c}`;
-    removeBtn.appendChild(icon);
+      removeBtn.className = 'remove-color-btn';
+      removeBtn.type = 'button';
+      removeBtn.title = `Remove color ${c}`;
+      // use trash icon for remove button (styling in CSS)
+      const icon = document.createElement('img');
+      icon.src = 'images/icons8-trash.svg';
+      icon.alt = `Remove ${c}`;
+      removeBtn.appendChild(icon);
 
       removeBtn.addEventListener('click', () => {
         const idx = ballColors.findIndex(x => x.toLowerCase() === c.toLowerCase());
@@ -254,8 +253,8 @@ Ball.prototype.collisionDetect = function () {
         let m1 = this.size * this.size;
         let m2 = balls[j].size * balls[j].size;
 
-    // Coefficient of restitution (slightly inelastic to avoid energy runaway)
-  let e = Number(config.restitution) || 0.9;
+        // Coefficient of restitution (slightly inelastic to avoid energy runaway)
+        let e = Number(config.restitution) || 0.9;
 
         // Impulse scalar
         let jImpulse = -(1 + e) * velAlongNormal / (1 / m1 + 1 / m2);
@@ -373,8 +372,8 @@ function populateInitial() {
   let attempts = 0;
   while (balls.length < initial && attempts < initial * 5) {
     attempts++;
-  let size = random(10, 20);
-  let color = (ballColors.length > 0) ? ballColors[Math.floor(Math.random() * ballColors.length)] : '#cccccc';
+    let size = random(10, 20);
+    let color = (ballColors.length > 0) ? ballColors[Math.floor(Math.random() * ballColors.length)] : '#cccccc';
     let ball = new Ball(
       random(0 + size, width - size),
       random(0 + size, height - size),
