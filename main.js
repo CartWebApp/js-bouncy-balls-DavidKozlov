@@ -86,6 +86,11 @@ Ball.prototype.update = function () {
 
 let balls = [];
 let pendingAdds = [];
+// cursor ball state
+let cursor = { x: width / 2, y: height / 2, size: 60, enabled: true };
+// trail for cursor (flowing white path)
+let cursorTrail = [];
+const cursorTrailDuration = 700; // ms
 
 function updateCounts() {
   if (countDisplay) countDisplay.textContent = balls.length;
@@ -110,31 +115,41 @@ function updateCounts() {
     removeBtn.className = 'remove-color-btn';
     removeBtn.type = 'button';
     removeBtn.title = `Remove color ${c}`;
+    // attach the color value to the button for delegated handling
+    removeBtn.dataset.color = c;
     // use trash icon for remove button (styling in CSS)
     const icon = document.createElement('img');
     icon.src = 'images/icons8-trash.svg';
     icon.alt = `Remove ${c}`;
     removeBtn.appendChild(icon);
-
-      removeBtn.addEventListener('click', () => {
-        const idx = ballColors.findIndex(x => x.toLowerCase() === c.toLowerCase());
-        if (idx >= 0) {
-          ballColors.splice(idx, 1);
-          // remove any existing balls of that color
-          for (let i = balls.length - 1; i >= 0; i--) {
-            if (balls[i].color && balls[i].color.toLowerCase() === c.toLowerCase()) {
-              balls.splice(i, 1);
-            }
-          }
-          updateCounts();
-        }
-      });
+      
 
       row.appendChild(countSpan);
       row.appendChild(removeBtn);
       colorsContainer.appendChild(row);
     });
   }
+}
+
+// delegated handler for remove-color buttons to avoid per-button listener issues
+if (colorsContainer) {
+  colorsContainer.addEventListener('click', (e) => {
+    const btn = e.target.closest('.remove-color-btn');
+    if (!btn || !colorsContainer.contains(btn)) return;
+    const colorToRemove = btn.dataset.color;
+    if (!colorToRemove) return;
+    const idx = ballColors.findIndex(x => x.toLowerCase() === colorToRemove.toLowerCase());
+    if (idx >= 0) {
+      ballColors.splice(idx, 1);
+      // remove any existing balls of that color
+      for (let i = balls.length - 1; i >= 0; i--) {
+        if (balls[i].color && balls[i].color.toLowerCase() === colorToRemove.toLowerCase()) {
+          balls.splice(i, 1);
+        }
+      }
+      updateCounts();
+    }
+  });
 }
 
 // handle adding new colors via the UI
@@ -203,7 +218,10 @@ const speedGrowthInput = document.getElementById('speed-growth');
 const restitutionInput = document.getElementById('restitution');
 const splitThresholdInput = document.getElementById('split-threshold');
 const minSplitSizeInput = document.getElementById('min-split-size');
+const cursorEnableInput = document.getElementById('cursor-enable');
+const cursorSizeInput = document.getElementById('cursor-size');
 const applyConfigBtn = document.getElementById('apply-config-btn');
+const changeBackground = document.getElementById('background-config')
 
 function readConfigFromUI() {
   if (initialCountInput) config.initialCount = Math.max(0, parseInt(initialCountInput.value) || config.initialCount);
@@ -214,11 +232,17 @@ function readConfigFromUI() {
   if (restitutionInput) config.restitution = Math.min(1, Math.max(0, parseFloat(restitutionInput.value) || config.restitution));
   if (splitThresholdInput) config.splitThresholdVel = Math.max(0, parseFloat(splitThresholdInput.value) || config.splitThresholdVel);
   if (minSplitSizeInput) config.minSizeToSplit = Math.max(1, parseInt(minSplitSizeInput.value) || config.minSizeToSplit);
+  if (cursorEnableInput) config.cursorEnabled = !!cursorEnableInput.checked;
+  if (cursorSizeInput) config.cursorSize = Math.max(0, parseInt(cursorSizeInput.value) || config.cursorSize || 60);
+  if (changeBackground) config.backgroundColor = (changeBackground && changeBackground.value || '').trim();
 }
 
 function applyConfigAndReload() {
   readConfigFromUI();
   syncGlobalsFromConfig();
+  // apply cursor config as well
+  cursor.enabled = !!config.cursorEnabled;
+  cursor.size = Number(config.cursorSize) || cursor.size;
   reloadSimulation();
 }
 
@@ -445,9 +469,50 @@ function loop(time) {
     }
   }
 
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+  ctx.fillStyle = config.backgroundColor || 'rgba(0, 0, 0, 0.25)';
   ctx.fillRect(0, 0, width, height);
+  if (cursor.enabled && cursorTrail.length > 1) {
+    const nowMs = performance.now();
+    while (cursorTrail.length && (nowMs - cursorTrail[0].t) > cursorTrailDuration) {
+      cursorTrail.shift();
+    }
+    if (cursorTrail.length > 1) {
+      ctx.save();
+      ctx.lineJoin = ctx.lineCap = 'round';
+      const baseWidth = Math.max(2, cursor.size * 0.12);
+      for (let i = 0; i < cursorTrail.length - 1; i++) {
+        const p1 = cursorTrail[i];
+        const p2 = cursorTrail[i + 1];
+        const age = nowMs - p1.t;
+        const alpha = Math.max(0, 1 - age / cursorTrailDuration);
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.lineWidth = baseWidth * (0.4 + 0.6 * alpha);
+        ctx.strokeStyle = `rgba(255,255,255,${0.9 * alpha})`;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = 'rgba(255,255,255,0.9)';
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
 
+  if (cursor.enabled) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.fillStyle = '#000';
+    ctx.arc(cursor.x, cursor.y, cursor.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = Math.max(2, Math.min(6, cursor.size * 0.06));
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = 'rgba(255,255,255,0.9)';
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  handleCursorCollisions();
   for (let i = 0; i < balls.length; i++) {
     balls[i].draw();
     balls[i].update();
@@ -470,3 +535,68 @@ function loop(time) {
 }
 
 requestAnimationFrame(loop);
+
+// mouse tracking
+window.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  cursor.x = e.clientX - rect.left;
+  cursor.y = e.clientY - rect.top;
+});
+window.addEventListener('mouseleave', () => {
+  // move off-screen when mouse leaves
+  cursor.x = -9999;
+  cursor.y = -9999;
+});
+
+// live UI hooks for cursor controls (apply without hitting Apply & Reload)
+if (cursorEnableInput) {
+  cursorEnableInput.addEventListener('change', () => {
+    cursor.enabled = !!cursorEnableInput.checked;
+  });
+}
+if (cursorSizeInput) {
+  cursorSizeInput.addEventListener('input', () => {
+    const v = parseInt(cursorSizeInput.value);
+    if (!isNaN(v) && v >= 0) cursor.size = v;
+  });
+}
+
+// cursor-ball collision: make balls bounce off an immovable object at cursor
+function handleCursorCollisions() {
+  if (!cursor.enabled) return;
+  for (let i = 0; i < balls.length; i++) {
+    let b = balls[i];
+    const dx = b.x - cursor.x;
+    const dy = b.y - cursor.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const minDist = b.size + cursor.size;
+    if (dist < minDist && dist > 0.0001) {
+      // normal vector from cursor -> ball
+      const nx = dx / dist;
+      const ny = dy / dist;
+
+      // immovable cursor has infinite mass
+      const vdotn = b.velX * nx + b.velY * ny;
+      const e = Number(config.restitution) || 0.9;
+      b.velX = b.velX - (1 + e) * vdotn * nx;
+      b.velY = b.velY - (1 + e) * vdotn * ny;
+
+      // push ball out of cursor to avoid sinking — only the penetration amount
+      const penetration = minDist - dist;
+      b.x += nx * penetration;
+      b.y += ny * penetration;
+
+      // clamp position so the ball doesn't get pushed outside the canvas
+      b.x = Math.min(Math.max(b.size, b.x), width - b.size);
+      b.y = Math.min(Math.max(b.size, b.y), height - b.size);
+
+      // clamp speed after change
+      let sp = Math.sqrt(b.velX * b.velX + b.velY * b.velY);
+      if (sp > maxSpeed) {
+        const s = maxSpeed / sp;
+        b.velX *= s;
+        b.velY *= s;
+      }
+    }
+  }
+}

@@ -131,10 +131,27 @@ h1 {
   background: rgba(255,255,255,0.02);
   color: #fff;
 }
+#config-panel input[type="text"] {
+  width: 110px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+  color: #fff;
+}
 
 /* smaller inputs */
 .config-row label { flex: 1 1 auto; }
 .config-row input[type="number"] { flex: 0 0 110px; }
+
+/* styled checkbox for cursor enable */
+.config-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #1e90ff;
+  margin-left: 55px;
+  margin-right: 55px;
+}
 
 #apply-config-btn {
   padding: 6px 8px;
