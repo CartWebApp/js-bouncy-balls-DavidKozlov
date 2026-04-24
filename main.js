@@ -17,7 +17,6 @@ const height = canvas.height = window.innerHeight;
 // configurations
 
 const ballColors = ['red', 'blue'];
-// mutable globals (will be set from config)
 let maxSpeed = 100;
 let MAX_BALLS = 2000;
 
@@ -112,17 +111,28 @@ function updateCounts() {
       countSpan.textContent = String(cnt);
 
       const removeBtn = document.createElement('button');
-    removeBtn.className = 'remove-color-btn';
-    removeBtn.type = 'button';
-    removeBtn.title = `Remove color ${c}`;
-    // attach the color value to the button for delegated handling
-    removeBtn.dataset.color = c;
-    // use trash icon for remove button (styling in CSS)
-    const icon = document.createElement('img');
-    icon.src = 'images/icons8-trash.svg';
-    icon.alt = `Remove ${c}`;
-    removeBtn.appendChild(icon);
-      
+      removeBtn.className = 'remove-color-btn';
+      removeBtn.type = 'button';
+      removeBtn.title = `Remove color ${c}`;
+      // use trash icon for remove button (styling in CSS)
+      const icon = document.createElement('img');
+      icon.src = 'images/icons8-trash.svg';
+      icon.alt = `Remove ${c}`;
+      removeBtn.appendChild(icon);
+
+      removeBtn.addEventListener('click', () => {
+        const idx = ballColors.findIndex(x => x.toLowerCase() === c.toLowerCase());
+        if (idx >= 0) {
+          ballColors.splice(idx, 1);
+          // remove any existing balls of that color
+          for (let i = balls.length - 1; i >= 0; i--) {
+            if (balls[i].color && balls[i].color.toLowerCase() === c.toLowerCase()) {
+              balls.splice(i, 1);
+            }
+          }
+          updateCounts();
+        }
+      });
 
       row.appendChild(countSpan);
       row.appendChild(removeBtn);
@@ -290,8 +300,8 @@ Ball.prototype.collisionDetect = function () {
         let m1 = this.size * this.size;
         let m2 = balls[j].size * balls[j].size;
 
-    // Coefficient of restitution (slightly inelastic to avoid energy runaway)
-  let e = Number(config.restitution) || 0.9;
+        // Coefficient of restitution (slightly inelastic to avoid energy runaway)
+        let e = Number(config.restitution) || 0.9;
 
         // Impulse scalar
         let jImpulse = -(1 + e) * velAlongNormal / (1 / m1 + 1 / m2);
